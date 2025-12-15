@@ -224,8 +224,6 @@ contract ERISTest is
         // Initialize allowed chains (example: 1 for Ethereum mainnet, 2 for Binance Smart Chain)
         allowedChains[84532] = true; // Coinbase Base Sepolia
         allowedChains[421614] = true; // Arbitrum Sepolia
-        allowedChains[11155111] = true; // Ethereum Sepolia
-        allowedChains[97] = true; // BNB Testnet
         // Add more chains as needed
 
         // Initialize allowed destination chains using CCIP chain selectors
@@ -238,23 +236,11 @@ contract ERISTest is
         chainNames[baseSepoliaSelector] = "Base Sepolia";
         chainSelectorsByName["Base Sepolia"] = baseSepoliaSelector;
 
-        // BNB Testnet
-        uint64 bnbTestnetSelector = 13264668187771770619;
-        allowedDestinationChains[bnbTestnetSelector] = true;
-        chainNames[bnbTestnetSelector] = "BNB Testnet";
-        chainSelectorsByName["BNB Testnet"] = bnbTestnetSelector;
-
         // Arbitrum Sepolia
         uint64 arbitrumSepoliaSelector = 3478487238524512106;
         allowedDestinationChains[arbitrumSepoliaSelector] = true;
         chainNames[arbitrumSepoliaSelector] = "Arbitrum Sepolia";
         chainSelectorsByName["Arbitrum Sepolia"] = arbitrumSepoliaSelector;
-
-        //Ethereum Sepolia
-        uint64 ethereumSepoliaSelector = 16015286601757825753;
-        allowedDestinationChains[ethereumSepoliaSelector] = true;
-        chainNames[ethereumSepoliaSelector] = "Ethereum Sepolia";
-        chainSelectorsByName["Ethereum Sepolia"] = ethereumSepoliaSelector;
 
         miningStartTimestamp = 1763263800; // Set the mining start timestamp
     }
@@ -274,14 +260,10 @@ contract ERISTest is
     function _getRouterForChain(
         uint256 chainId
     ) private pure returns (address router) {
-        if (chainId == 11155111)
-            return address(0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59); // Ethereum Sepolia
         if (chainId == 84532)
             return address(0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93); // Base Sepolia
         if (chainId == 421614)
             return address(0x2a9C5afB0d0e4BAb2BCdaE109EC4b0c4Be15a165); // Arbitrum Sepolia
-        if (chainId == 97)
-            return address(0xE1053aE1857476f36A3C62580FF9b016E8EE8F6f); // BNB Testnet
         return address(0);
     }
 

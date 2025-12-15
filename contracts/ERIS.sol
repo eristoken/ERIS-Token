@@ -81,23 +81,22 @@ contract ERIS is
     // Reward System - Weighted RNG (23-Based)
     // --------------------------------------------
     uint256 public constant BASE_REWARD_RATE = 23; // Base reward rate (23 tokens per mint)
-    
+
     // Reward Tier Multipliers (23-based Discordian system)
     uint256 public constant TIER_DISCORDANT_MULTIPLIER = 5; // 0.5× (stored as 5/10)
     uint256 public constant TIER_NEUTRAL_MULTIPLIER = 10; // 1.0× (stored as 10/10)
     uint256 public constant TIER_FAVORED_MULTIPLIER = 23; // 2.3× (stored as 23/10)
     uint256 public constant TIER_BLESSED_MULTIPLIER = 50; // 5× (stored as 50/10)
     uint256 public constant TIER_ENIGMA_MULTIPLIER = 230; // 23× (stored as 230/10)
-    
+
     // Tier enum for events
     enum RewardTier {
-        Discordant,  // 0 - 45% probability
-        Neutral,     // 1 - 30% probability
-        Favored,     // 2 - 15% probability
-        Blessed,     // 3 - 9% probability
-        Enigma23     // 4 - ~1% probability (1 in 23)
+        Discordant, // 0 - 45% probability
+        Neutral, // 1 - 30% probability
+        Favored, // 2 - 15% probability
+        Blessed, // 3 - 9% probability
+        Enigma23 // 4 - ~1% probability (1 in 23)
     }
-    
 
     // --------------------------------------------
     // Flash Loan Settings
@@ -144,7 +143,7 @@ contract ERIS is
         uint256 ethBlocksSinceLastDifficultyPeriod
     );
     event NewEpochStarted(uint256 epochCount, bytes32 challengeNumber);
-    
+
     // Tier-specific events (Discordian themed)
     event DiscordantMine(address indexed miner, uint256 reward);
     event NeutralMine(address indexed miner, uint256 reward);
@@ -199,9 +198,7 @@ contract ERIS is
         // Base PoW reward (23 tokens per mint, multiplied by tier)
         currentMiningReward = BASE_REWARD_RATE * 10 ** decimals();
         // Set placeholder address for admin (update after deployment)
-        admin = address(
-            0xcac64DA6455345C0b7d8b9746e3F15df133A01f6
-        );
+        admin = address(0xcac64DA6455345C0b7d8b9746e3F15df133A01f6);
 
         // Initialize CCIP extraArgs with default values
         ccipGasLimit = 200_000; // Default gas limit for CCIP message execution
@@ -216,10 +213,6 @@ contract ERIS is
         allowedChains[42161] = true; // Arbitrum One Mainnet
         allowedChains[137] = true; // Polygon (MATIC) Mainnet
         allowedChains[56] = true; // BNB Mainnet
-        allowedChains[57073] = true; // Ink Mainnet
-        allowedChains[130] = true; // Unichain Mainnet
-        allowedChains[480] = true; // World Chain Mainnet
-        allowedChains[1868] = true; // Soneium Mainnet
         allowedChains[1] = true; // ETH Mainnet
         // Add more chains as needed
 
@@ -245,12 +238,6 @@ contract ERIS is
         chainNames[arbitrumSelector] = "Arbitrum One";
         chainSelectorsByName["Arbitrum One"] = arbitrumSelector;
 
-        // Ink
-        uint64 inkSelector = 3461204551265785888;
-        allowedDestinationChains[inkSelector] = true;
-        chainNames[inkSelector] = "Ink";
-        chainSelectorsByName["Ink"] = inkSelector;
-
         // Ethereum Mainnet
         uint64 ethereumSelector = 5009297550715157269;
         allowedDestinationChains[ethereumSelector] = true;
@@ -262,24 +249,6 @@ contract ERIS is
         allowedDestinationChains[polygonSelector] = true;
         chainNames[polygonSelector] = "Polygon";
         chainSelectorsByName["Polygon"] = polygonSelector;
-
-        // Unichain
-        uint64 unichainSelector = 1923510103922296319;
-        allowedDestinationChains[unichainSelector] = true;
-        chainNames[unichainSelector] = "Unichain";
-        chainSelectorsByName["Unichain"] = unichainSelector;
-
-        // Soneium
-        uint64 soneiumSelector = 12505351618335765396;
-        allowedDestinationChains[soneiumSelector] = true;
-        chainNames[soneiumSelector] = "Soneium";
-        chainSelectorsByName["Soneium"] = soneiumSelector;
-
-        // World Chain
-        uint64 worldChainSelector = 2049429975587534727;
-        allowedDestinationChains[worldChainSelector] = true;
-        chainNames[worldChainSelector] = "World Chain";
-        chainSelectorsByName["World Chain"] = worldChainSelector;
 
         miningStartTimestamp = 1764309600; // Set the mining start timestamp
     }
@@ -307,16 +276,8 @@ contract ERIS is
             return address(0x849c5ED5a80F5B408Dd4969b78c2C8fdf0565Bfe); // Polygon
         if (chainId == 56)
             return address(0x34B03Cb9086d7D758AC55af71584F81A598759FE); // BNB
-        if (chainId == 57073)
-            return address(0xca7c90A52B44E301AC01Cb5EB99b2fD99339433A); // Ink
         if (chainId == 42161)
             return address(0x141fa059441E0ca23ce184B6A78bafD2A517DdE8); // Arbitrum One
-        if (chainId == 480)
-            return address(0x5fd9E4986187c56826A3064954Cfa2Cf250cfA0f); // World Chain
-        if (chainId == 1868)
-            return address(0x8C8B88d827Fe14Df2bc6392947d513C86afD6977); // Soneium
-        if (chainId == 130)
-            return address(0x68891f5F96695ECd7dEdBE2289D1b73426ae7864); // Unichain
         return address(0);
     }
 
@@ -453,14 +414,8 @@ contract ERIS is
      * @dev Only callable by the authorized admin address
      */
     function setAllowedChain(uint256 chainId, bool allowed) external {
-        require(
-            msg.sender == admin,
-            "Only admin can set allowed chains"
-        );
-        require(
-            admin != address(0),
-            "Admin not configured"
-        );
+        require(msg.sender == admin, "Only admin can set allowed chains");
+        require(admin != address(0), "Admin not configured");
 
         allowedChains[chainId] = allowed;
         emit AllowedChainUpdated(chainId, allowed);
@@ -478,14 +433,8 @@ contract ERIS is
         bool allowed,
         string memory name
     ) external {
-        require(
-            msg.sender == admin,
-            "Only admin can set destination chains"
-        );
-        require(
-            admin != address(0),
-            "Admin not configured"
-        );
+        require(msg.sender == admin, "Only admin can set destination chains");
+        require(admin != address(0), "Admin not configured");
 
         allowedDestinationChains[chainSelector] = allowed;
         if (bytes(name).length > 0) {
@@ -508,14 +457,8 @@ contract ERIS is
         uint256 newGasLimit,
         bool newAllowOutOfOrderExecution
     ) external {
-        require(
-            msg.sender == admin,
-            "Only admin can set CCIP extraArgs"
-        );
-        require(
-            admin != address(0),
-            "Admin not configured"
-        );
+        require(msg.sender == admin, "Only admin can set CCIP extraArgs");
+        require(admin != address(0), "Admin not configured");
         require(newGasLimit > 0, "Gas limit must be greater than zero");
 
         ccipGasLimit = newGasLimit;
@@ -666,7 +609,7 @@ contract ERIS is
 
         // Calculate weighted RNG tier using the PoW digest (unpredictable by miner)
         RewardTier tier = _calculateRewardTier(minter, digest);
-        
+
         // Calculate tier-adjusted reward
         uint256 baseReward = BASE_REWARD_RATE * 10 ** decimals();
         uint256 tierMultiplier = _getTierMultiplier(tier);
@@ -681,10 +624,10 @@ contract ERIS is
 
         _startNewMiningEpoch();
         emit Mint(minter, reward, epochCount, challengeNumber);
-        
+
         // Emit tier-specific event
         _emitTierEvent(minter, reward, tier);
-        
+
         return true;
     }
 
@@ -713,10 +656,10 @@ contract ERIS is
         // blockhash(block.number - 1) is always available
         // blockhash(block.number - 23) requires archive node if block.number < 23
         bytes32 blockHash1 = blockhash(block.number - 1);
-        bytes32 blockHash23 = block.number >= 23 
-            ? blockhash(block.number - 23) 
+        bytes32 blockHash23 = block.number >= 23
+            ? blockhash(block.number - 23)
             : blockhash(block.number - 1); // Fallback if not enough history
-        
+
         // Generate entropy from sources that miners cannot predict/control:
         // 1. powDigest - The PoW solution hash (unpredictable, miner must find valid nonce)
         // 2. block.timestamp - Only manipulable within ~1-2 second window
@@ -727,29 +670,29 @@ contract ERIS is
         uint256 entropy = uint256(
             keccak256(
                 abi.encodePacked(
-                    powDigest,              // PoW solution (unpredictable)
-                    blockHash1,             // Previous block (known but immutable)
-                    blockHash23,            // Historical block (known but immutable)
-                    block.timestamp,        // Current timestamp (minimal manipulation)
-                    minter                  // Miner address (fixed)
+                    powDigest, // PoW solution (unpredictable)
+                    blockHash1, // Previous block (known but immutable)
+                    blockHash23, // Historical block (known but immutable)
+                    block.timestamp, // Current timestamp (minimal manipulation)
+                    minter // Miner address (fixed)
                 )
             )
         );
-        
+
         // Roll using 23-based system
         uint256 roll = entropy % 23;
-        
+
         // Tier mapping (23-based Discordian distribution)
         if (roll == 0) {
-            return RewardTier.Enigma23;      // 1/23 ≈ 4.35% - The rare 23 Enigma
+            return RewardTier.Enigma23; // 1/23 ≈ 4.35% - The rare 23 Enigma
         } else if (roll <= 2) {
-            return RewardTier.Blessed;        // 2/23 ≈ 8.70% - Blessed of Eris
+            return RewardTier.Blessed; // 2/23 ≈ 8.70% - Blessed of Eris
         } else if (roll <= 5) {
-            return RewardTier.Favored;        // 3/23 ≈ 13.04% - Favored by Eris
+            return RewardTier.Favored; // 3/23 ≈ 13.04% - Favored by Eris
         } else if (roll <= 12) {
-            return RewardTier.Neutral;        // 7/23 ≈ 30.43% - Neutral outcome
+            return RewardTier.Neutral; // 7/23 ≈ 30.43% - Neutral outcome
         } else {
-            return RewardTier.Discordant;     // 10/23 ≈ 43.48% - Discordant chaos
+            return RewardTier.Discordant; // 10/23 ≈ 43.48% - Discordant chaos
         }
     }
 
@@ -758,17 +701,20 @@ contract ERIS is
      * @param tier The reward tier
      * @return multiplier The tier multiplier (stored as 10x, e.g., 23 = 2.3×)
      */
-    function _getTierMultiplier(RewardTier tier) internal pure returns (uint256 multiplier) {
+    function _getTierMultiplier(
+        RewardTier tier
+    ) internal pure returns (uint256 multiplier) {
         if (tier == RewardTier.Discordant) {
-            return TIER_DISCORDANT_MULTIPLIER;  // 0.5×
+            return TIER_DISCORDANT_MULTIPLIER; // 0.5×
         } else if (tier == RewardTier.Neutral) {
-            return TIER_NEUTRAL_MULTIPLIER;      // 1.0×
+            return TIER_NEUTRAL_MULTIPLIER; // 1.0×
         } else if (tier == RewardTier.Favored) {
-            return TIER_FAVORED_MULTIPLIER;     // 2.3×
+            return TIER_FAVORED_MULTIPLIER; // 2.3×
         } else if (tier == RewardTier.Blessed) {
-            return TIER_BLESSED_MULTIPLIER;     // 5×
-        } else { // Enigma23
-            return TIER_ENIGMA_MULTIPLIER;      // 23×
+            return TIER_BLESSED_MULTIPLIER; // 5×
+        } else {
+            // Enigma23
+            return TIER_ENIGMA_MULTIPLIER; // 23×
         }
     }
 
@@ -778,7 +724,11 @@ contract ERIS is
      * @param reward The reward amount
      * @param tier The reward tier
      */
-    function _emitTierEvent(address minter, uint256 reward, RewardTier tier) internal {
+    function _emitTierEvent(
+        address minter,
+        uint256 reward,
+        RewardTier tier
+    ) internal {
         if (tier == RewardTier.Discordant) {
             emit DiscordantMine(minter, reward);
         } else if (tier == RewardTier.Neutral) {
@@ -787,7 +737,8 @@ contract ERIS is
             emit ErisFavor(minter, reward);
         } else if (tier == RewardTier.Blessed) {
             emit DiscordianBlessing(minter, reward);
-        } else { // Enigma23
+        } else {
+            // Enigma23
             emit Enigma23(minter, reward);
         }
     }
@@ -933,21 +884,14 @@ contract ERIS is
      * @dev Emits AdminUpdated event
      * @dev This is a non-critical admin function for operational parameters
      */
-    function setAdmin(
-        address _admin
-    ) external {
-        require(
-            _admin != address(0),
-            "Cannot set to zero address"
-        );
+    function setAdmin(address _admin) external {
+        require(_admin != address(0), "Cannot set to zero address");
         // Allow setting if not set yet (address(0)), or if current admin is placeholder, or allow current admin to update
         address placeholder = address(
             0x1111111111111111111111111111111111111111
         );
         require(
-            admin == address(0) ||
-                admin == placeholder ||
-                msg.sender == admin,
+            admin == address(0) || admin == placeholder || msg.sender == admin,
             "Unauthorized to set admin"
         );
         address oldAdmin = admin;

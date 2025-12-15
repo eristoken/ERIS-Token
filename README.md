@@ -136,16 +136,11 @@ Each tier emits a unique event for tracking and analytics:
 - Arbitrum One (42161)
 - Polygon (137)
 - BNB Chain (56)
-- Ink (57073)
-- Unichain (130)
-- World Chain (480)
-- Soneium (1868)
 
 ### Testnet Chains
 - Base Sepolia
 - Arbitrum Sepolia
 - Ethereum Sepolia
-- BSC Testnet
 
 ## Installation
 
