@@ -248,7 +248,7 @@ function getCCIPCrossChainBridgeFee(
 ) external view returns (uint256 fee);
 ```
 
-**Supported Chain Names**: "Base", "Ethereum", "Polygon", "BNB", "Arbitrum One", "Ink", "Unichain", "Soneium", "World Chain"
+**Supported Chain Names**: "Base", "Ethereum", "Polygon", "BNB", "Arbitrum One"
 
 #### CCIP Bridge Important Notes
 
