@@ -12,6 +12,13 @@ ERIS is a mineable ERC-20 token that implements:
 - **Superchain Support**: IERC7802 interface for OP Superchain compatibility
 - **Flash Loans**: ERC-3156 Flash Mint support
 
+**Token Supply**: ERIS has an **unlimited supply** design. Tokens are continuously minted through:
+- Proof-of-Work mining (with Discordian-weighted rewards)
+- Cross-chain bridging operations (CCIP and Superchain)
+- Flash minting (temporary, must be repaid within transaction)
+
+This design allows for continuous mining rewards and seamless cross-chain operations without supply constraints.
+
 ## Features
 
 ### Proof-of-Work Mining
@@ -127,6 +134,8 @@ Each tier emits a unique event for tracking and analytics:
 - **ERISSepolia (ERIS Token)**: `0xCeF263A2587fe8F9d4BEDAb339E4b5258ac07690`
 
 > **Note on Deterministic Deployments**: These contracts use deterministic deployment (CREATE2), which means each contract uses the **same address on each supported chain**. This enables seamless cross-chain bridging and ensures consistent contract addresses across all networks where the contracts are deployed.
+>
+> **Security Requirement**: The contract enforces `sender == address(this)` in CCIP message validation. This security measure requires deterministic deployment using CREATE2 with identical salt and init code on all chains. Failure to deploy deterministically will result in rejected cross-chain messages.
 
 ## Supported Chains
 
@@ -241,6 +250,19 @@ function getCCIPCrossChainBridgeFee(
 
 **Supported Chain Names**: "Base", "Ethereum", "Polygon", "BNB", "Arbitrum One", "Ink", "Unichain", "Soneium", "World Chain"
 
+#### CCIP Bridge Important Notes
+
+**Refund Mechanism:**
+- Excess ETH payments are automatically refunded using `transfer()` per Chainlink's recommended pattern
+- This forwards 2,300 gas, which is sufficient for EOA (Externally Owned Account) recipients
+- **Contract users**: If your contract has a `receive()` or `fallback()` function, ensure it uses minimal gas (< 2,300) or use an EOA intermediary for bridging
+
+**Bridge Risk Warning:**
+- Tokens are **burned on the source chain** before the CCIP message is sent
+- If CCIP message delivery fails (network issues, service limits, etc.), tokens are **permanently lost**
+- Users should understand CCIP service limits and potential failure modes before bridging
+- See [Chainlink CCIP Service Limits](https://docs.chain.link/ccip/service-limits) for details
+
 ### Flash Loans
 
 ```solidity
@@ -275,7 +297,8 @@ function setCCIPExtraArgs(uint256 newGasLimit, bool newAllowOutOfOrderExecution)
 - `getChallengeNumber()` - Get current PoW challenge
 - `getMiningDifficulty()` - Get current difficulty
 - `getMiningTarget()` - Get current mining target
-- `getMiningReward()` - Get current reward amount
+- `getMiningReward()` - Get base reward amount (EIP-918 compliance - returns 23 ERIS base reward)
+  - **Note**: Actual rewards use tiered system (11.5-529 ERIS). See Discordian Reward System section.
 - `minedSupply()` - Get total tokens minted via PoW
 
 ### Cross-Chain Functions
@@ -313,6 +336,8 @@ function setCCIPExtraArgs(uint256 newGasLimit, bool newAllowOutOfOrderExecution)
 - **Bounds checking** - All adjustments are bounded to prevent overflow/underflow
 - **Overflow protection** - Built-in Solidity 0.8.28 protection
 - **Authorized admin functions** - Chain and CCIP management restricted to admin
+- **Immutable mining start timestamp** - Prevents pre-mining attacks by fixing launch time at deployment
+- **Deterministic deployment enforcement** - CCIP security check ensures only legitimate contract messages are accepted
 
 ## Testing
 

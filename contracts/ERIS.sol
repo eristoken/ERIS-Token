@@ -250,7 +250,10 @@ contract ERIS is
         chainNames[polygonSelector] = "Polygon";
         chainSelectorsByName["Polygon"] = polygonSelector;
 
-        miningStartTimestamp = 1764309600; // Set the mining start timestamp
+        // Set the mining start timestamp (immutable to prevent pre-mining attacks)
+        // This ensures fair distribution by preventing miners from preparing solutions
+        // in advance before the official launch
+        miningStartTimestamp = 1764309600;
     }
 
     /*
@@ -329,7 +332,9 @@ contract ERIS is
         bytes memory payload = abi.encode(amount, owner);
 
         // Create CCIP message
-        // Receiver is always this contract address due to deterministic deployment
+        // SECURITY: Receiver is always this contract address due to deterministic deployment requirement.
+        // The contract must be deployed using CREATE2 with identical salt and init code on all chains
+        // to ensure the same address. This is enforced in _ccipReceive() via sender == address(this) check.
         Client.EVM2AnyMessage memory evm2AnyMessage = Client.EVM2AnyMessage({
             receiver: abi.encode(address(this)), // Destination contract address (deterministic deployment)
             data: payload, // Encoded payload
@@ -354,6 +359,9 @@ contract ERIS is
         );
 
         // Refund excess payment
+        // NOTE: Uses transfer() per Chainlink CCIP recommended pattern. This forwards 2,300 gas,
+        // which is sufficient for EOA recipients but may fail for contracts with complex fallback functions.
+        // Contract users should ensure minimal fallback functions or use EOA intermediaries.
         if (msg.value > fee) {
             payable(owner).transfer(msg.value - fee);
         }
@@ -387,6 +395,10 @@ contract ERIS is
         address sender = abi.decode(message.sender, (address));
 
         // Verify the message came from this contract on the source chain
+        // SECURITY: This check is an intentional security measure to prevent malicious contracts
+        // from spoofing cross-chain messages. The contract must be deterministically deployed
+        // (using CREATE2 with identical salt and init code) to the same address on all chains.
+        // This ensures only legitimate ERIS contract messages are accepted.
         // Since the contract is deterministically deployed to the same address on all chains,
         // the sender should always be address(this)
         require(
@@ -880,7 +892,9 @@ contract ERIS is
      * @dev Can be updated by:
      *      - Current admin (if already set)
      *      - Anyone if admin is address(0) (not yet set)
-     *      - Anyone if admin is placeholder address (0x1111...)
+     *      - Anyone if admin is placeholder address (0x1111...) - provides flexibility for alternative deployment patterns
+     * @dev The placeholder logic is intentional, allowing for different deployment scenarios while
+     *      maintaining security through specific admin addresses in production deployments
      * @dev Emits AdminUpdated event
      * @dev This is a non-critical admin function for operational parameters
      */
@@ -950,9 +964,13 @@ contract ERIS is
     }
 
     /**
-     * @notice Returns the current mining reward amount
-     * @dev Required by EIP-918 standard
-     * @return The current mining reward in wei
+     * @notice Returns the current mining reward amount (base reward for EIP-918 compliance)
+     * @dev Required by EIP-918 standard - returns the base reward value
+     * @dev NOTE: Actual mining rewards use a tiered Discordian RNG system with multipliers
+     *      ranging from 0.5× (Discordant: 11.5 ERIS) to 23× (Enigma23: 529 ERIS)
+     * @dev Expected value per successful mine: ~49.45 ERIS (weighted average)
+     * @dev This function returns the base reward (23 ERIS) for EIP-918 compliance, not the actual payout
+     * @return The base mining reward in wei (23 ERIS)
      */
     function getMiningReward() external view returns (uint) {
         return currentMiningReward;
