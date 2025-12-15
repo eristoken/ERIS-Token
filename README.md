@@ -1,4 +1,4 @@
-# ERIS Token (Eris Token)
+# $ERIS Token (Eris Token)
 
 A Proof-of-Work (PoW) ERC-20 token with **Discordian-weighted RNG rewards**, adaptive difficulty adjustment, cross-chain bridging via Chainlink CCIP, and Superchain compatibility. Features a 23-based reward system with 5 tiers ranging from 11.5 ERIS (Discordant) to 529 ERIS (23 Enigma jackpot).
 
