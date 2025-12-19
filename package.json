@@ -20,7 +20,7 @@
   },
   "scripts": {
     "build": "npx hardhat compile",
-    "deploy_erisTest": "npx hardhat ignition deploy ignition/modules/ERISTest.ts --network arbitrum-sepolia --strategy create2",
+    "deploy_erisTest": "npx hardhat ignition deploy ignition/modules/ERISTest.ts --network base-sepolia --strategy create2",
     "deploy_erisSep": "npx hardhat ignition deploy ignition/modules/ERISSepolia.ts --network bscTestnet --strategy create2",
     "deploy_eris": "npx hardhat ignition deploy ignition/modules/ERIS.ts --network polygon --strategy create2",
     "verify_eris": "npx hardhat verify --network ink 0xae80e9FF0e624C44C252aD950DbF39ac9BdB9E4f 0x0000000000000000000000000000000000000000",
