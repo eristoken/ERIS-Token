@@ -149,7 +149,7 @@ Each tier emits a unique event for tracking and analytics:
 ### Testnet Chains
 - Base Sepolia
 - Arbitrum Sepolia
-- Ethereum Sepolia
+- BNB Testnet
 
 ## Installation
 
