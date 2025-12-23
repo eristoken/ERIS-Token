@@ -207,7 +207,7 @@ contract ERISTest is
         currentMiningReward = BASE_REWARD_RATE * 10 ** decimals();
         // Set placeholder address for admin (update after deployment)
         admin = address(
-            0xcac64DA6455345C0b7d8b9746e3F15df133A01f6
+            0x70c65c7cAB0d5A9EC6A394DDb85C50E2328912e3
         );
 
         // Initialize CCIP extraArgs with default values
