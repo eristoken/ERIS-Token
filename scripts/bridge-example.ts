@@ -58,12 +58,12 @@ async function bridgeTokens() {
     const [walletClient] = await viem.getWalletClients();
 
     // Configuration - Set these in your .env file or modify here
-    const ERIS_CONTRACT_ADDRESS = process.env.ERIS_CONTRACT_ADDRESS || process.env.FTIC_CONTRACT_ADDRESS || "";
+    const ERIS_CONTRACT_ADDRESS = process.env.ERIS_CONTRACT_ADDRESS || process.env.ERIS_CONTRACT_ADDRESS || "";
     const DESTINATION_CHAIN = process.env.DESTINATION_CHAIN || "base"; // e.g., "base", "polygon", "arbitrum"
     const AMOUNT = process.env.BRIDGE_AMOUNT || "100"; // Amount in tokens (will be converted to wei)
 
     if (!ERIS_CONTRACT_ADDRESS) {
-      throw new Error("ERIS_CONTRACT_ADDRESS (or FTIC_CONTRACT_ADDRESS) not set in .env");
+      throw new Error("ERIS_CONTRACT_ADDRESS (or ERIS_CONTRACT_ADDRESS) not set in .env");
     }
 
     const chainKey = DESTINATION_CHAIN.toLowerCase();
@@ -292,12 +292,12 @@ async function getBridgeFeeExample() {
     const publicClient = await viem.getPublicClient();
     const [walletClient] = await viem.getWalletClients();
 
-    const ERIS_CONTRACT_ADDRESS = process.env.ERIS_CONTRACT_ADDRESS || process.env.FTIC_CONTRACT_ADDRESS || "";
+    const ERIS_CONTRACT_ADDRESS = process.env.ERIS_CONTRACT_ADDRESS || process.env.ERIS_CONTRACT_ADDRESS || "";
     const DESTINATION_CHAIN = process.env.DESTINATION_CHAIN || "base";
     const AMOUNT = process.env.BRIDGE_AMOUNT || "100";
 
     if (!ERIS_CONTRACT_ADDRESS) {
-      throw new Error("ERIS_CONTRACT_ADDRESS (or FTIC_CONTRACT_ADDRESS) not set in .env");
+      throw new Error("ERIS_CONTRACT_ADDRESS (or ERIS_CONTRACT_ADDRESS) not set in .env");
     }
 
     const chainKey = DESTINATION_CHAIN.toLowerCase();
@@ -353,7 +353,7 @@ if (require.main === module) {
   console.log("  - getBridgeFeeExample() - Get fee estimate without bridging");
   console.log("  - bridgeTokens() - Complete bridge transaction");
   console.log("\nEnvironment variables needed:");
-  console.log("  - ERIS_CONTRACT_ADDRESS: The ERIS contract address (or FTIC_CONTRACT_ADDRESS for backward compatibility)");
+  console.log("  - ERIS_CONTRACT_ADDRESS: The ERIS contract address (or ERIS_CONTRACT_ADDRESS for backward compatibility)");
   console.log("  - DESTINATION_CHAIN: Destination chain (base, polygon, arbitrum, etc.)");
   console.log("  - BRIDGE_AMOUNT: Amount to bridge in tokens (default: 100)");
   console.log("  Note: Receiver is always the contract address due to deterministic deployment");
