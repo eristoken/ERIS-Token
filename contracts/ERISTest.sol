@@ -116,19 +116,23 @@ contract ERISTest is
     // --------------------------------------------
     // Miner Stats & Leaderboard
     // --------------------------------------------
+    // Maximum values for uint128 fields to prevent overflow
+    uint128 public constant MAX_TIER_COUNT = type(uint128).max; // 2^128 - 1
+    uint128 public constant MAX_SCORE = type(uint128).max; // 2^128 - 1
+    
     struct MinerStats {
-        uint256 tier1Count; // Discordant
-        uint256 tier2Count; // Neutral
-        uint256 tier3Count; // Favored
-        uint256 tier4Count; // Blessed
-        uint256 tier5Count; // Enigma23
-        uint256 score;      // Total score (tier1*1 + tier2*2 + tier3*3 + tier4*4 + tier5*5)
+        uint128 tier1Count; // Discordant
+        uint128 tier2Count; // Neutral
+        uint128 tier3Count; // Favored
+        uint128 tier4Count; // Blessed
+        uint128 tier5Count; // Enigma23
+        uint128 score;      // Total score (tier1*1 + tier2*2 + tier3*3 + tier4*4 + tier5*5)
     }
 
     // NOTE: minerStats mapping stores stats for ALL miners who have ever mined
-    // The leaderboard array only maintains top 1000 for efficient sorted retrieval
+    // The leaderboard array only maintains top 100 for efficient sorted retrieval
     // You can still query stats for ANY miner using getMinerStats() regardless of leaderboard position
-    mapping(address => MinerStats) public minerStats; // Stats for ALL miners (not limited to top 1000)
+    mapping(address => MinerStats) public minerStats; // Stats for ALL miners (not limited to top 100)
     address[] public miners; // Array to track all miner addresses for iteration
     mapping(address => bool) public isRegisteredMiner; // Track if miner is already in the array
 
@@ -137,7 +141,7 @@ contract ERISTest is
     // All miner stats are still accessible via minerStats mapping regardless of leaderboard position
     address[] public leaderboard; // Sorted array of top miners by score (highest first)
     mapping(address => uint256) public leaderboardIndex; // Maps address to their position in leaderboard (1-indexed, 0 = not in leaderboard)
-    uint256 public constant MAX_LEADERBOARD_SIZE = 1000; // Maximum number of miners in leaderboard
+    uint256 public constant MAX_LEADERBOARD_SIZE = 100; // Maximum number of miners in leaderboard
 
     // --------------------------------------------
     // Faucet
@@ -185,16 +189,11 @@ contract ERISTest is
     event DiscordianBlessing(address indexed miner, uint256 reward);
     event Enigma23(address indexed miner, uint256 reward);
 
-    // Miner stats events
+    // Miner stats events (optimized - only emits changed tier and new score)
     event MinerStatsUpdated(
         address indexed miner,
         uint256 tier,
-        uint256 newScore,
-        uint256 tier1Count,
-        uint256 tier2Count,
-        uint256 tier3Count,
-        uint256 tier4Count,
-        uint256 tier5Count
+        uint256 newScore
     );
 
     event CrossChainReceived(uint256 amount, address owner, uint64 sourceChain);
@@ -798,49 +797,50 @@ contract ERISTest is
 
         MinerStats storage stats = minerStats[minter];
         uint256 tierNumber;
-        uint256 points;
+        uint128 points;
 
         // Map RewardTier enum to tier number (1-5) and points
         if (tier == RewardTier.Discordant) {
+            require(stats.tier1Count < MAX_TIER_COUNT, "Tier1 count overflow");
             stats.tier1Count++;
             tierNumber = 1;
             points = 1;
         } else if (tier == RewardTier.Neutral) {
+            require(stats.tier2Count < MAX_TIER_COUNT, "Tier2 count overflow");
             stats.tier2Count++;
             tierNumber = 2;
             points = 2;
         } else if (tier == RewardTier.Favored) {
+            require(stats.tier3Count < MAX_TIER_COUNT, "Tier3 count overflow");
             stats.tier3Count++;
             tierNumber = 3;
             points = 3;
         } else if (tier == RewardTier.Blessed) {
+            require(stats.tier4Count < MAX_TIER_COUNT, "Tier4 count overflow");
             stats.tier4Count++;
             tierNumber = 4;
             points = 4;
         } else {
             // Enigma23
+            require(stats.tier5Count < MAX_TIER_COUNT, "Tier5 count overflow");
             stats.tier5Count++;
             tierNumber = 5;
             points = 5;
         }
 
-        // Update total score
-        uint256 oldScore = stats.score;
-        stats.score += points;
+        // Update total score with overflow protection
+        uint128 oldScore = stats.score;
+        require(oldScore <= MAX_SCORE - points, "Score overflow");
+        stats.score = oldScore + points;
 
         // Update leaderboard if score changed
         _updateLeaderboard(minter, oldScore, stats.score);
 
-        // Emit event for off-chain indexing
+        // Emit optimized event (only changed tier and new score)
         emit MinerStatsUpdated(
             minter,
             tierNumber,
-            stats.score,
-            stats.tier1Count,
-            stats.tier2Count,
-            stats.tier3Count,
-            stats.tier4Count,
-            stats.tier5Count
+            stats.score
         );
     }
 
@@ -854,8 +854,8 @@ contract ERISTest is
      */
     function _updateLeaderboard(
         address miner,
-        uint256 oldScore,
-        uint256 newScore
+        uint128 oldScore,
+        uint128 newScore
     ) internal {
         uint256 currentIndex = leaderboardIndex[miner];
         bool isInLeaderboard = currentIndex > 0;
@@ -883,7 +883,7 @@ contract ERISTest is
                 _insertIntoLeaderboard(miner, position);
             } else {
                 // Leaderboard is full - check if new score beats the lowest score
-                uint256 lowestScore = minerStats[leaderboard[leaderboard.length - 1]].score;
+                uint128 lowestScore = minerStats[leaderboard[leaderboard.length - 1]].score;
                 if (newScore > lowestScore) {
                     // Remove lowest scorer
                     _removeFromLeaderboard(leaderboard.length - 1);
@@ -902,14 +902,14 @@ contract ERISTest is
      * @return position The index where this score should be inserted (0-indexed)
      * @dev Uses binary search for efficiency
      */
-    function _findLeaderboardPosition(uint256 score) internal view returns (uint256 position) {
+    function _findLeaderboardPosition(uint128 score) internal view returns (uint256 position) {
         uint256 left = 0;
         uint256 right = leaderboard.length;
         
         // Binary search for insertion point (maintains descending order)
         while (left < right) {
             uint256 mid = (left + right) / 2;
-            uint256 midScore = minerStats[leaderboard[mid]].score;
+            uint128 midScore = minerStats[leaderboard[mid]].score;
             
             if (score > midScore) {
                 right = mid;
@@ -1205,7 +1205,7 @@ contract ERISTest is
      * @return tier5Count Number of Tier 5 (Enigma23) mines
      * @return score Total score (tier1*1 + tier2*2 + tier3*3 + tier4*4 + tier5*5)
      * @dev Use this function to retrieve all stats for a miner in a single call
-     * @dev IMPORTANT: Works for ALL miners, not just those in the top 1000 leaderboard
+     * @dev IMPORTANT: Works for ALL miners, not just those in the top 100 leaderboard
      * @dev The minerStats mapping tracks stats for every miner who has ever mined
      * @dev Perfect for trophy crafting and checking stats for any miner address
      */
@@ -1215,12 +1215,12 @@ contract ERISTest is
         external
         view
         returns (
-            uint256 tier1Count,
-            uint256 tier2Count,
-            uint256 tier3Count,
-            uint256 tier4Count,
-            uint256 tier5Count,
-            uint256 score
+            uint128 tier1Count,
+            uint128 tier2Count,
+            uint128 tier3Count,
+            uint128 tier4Count,
+            uint128 tier5Count,
+            uint128 score
         )
     {
         MinerStats memory stats = minerStats[minter];
@@ -1239,10 +1239,10 @@ contract ERISTest is
      * @param miner The address of the miner
      * @return score Total score (tier1*1 + tier2*2 + tier3*3 + tier4*4 + tier5*5)
      * @dev Lightweight function to get just the score
-     * @dev IMPORTANT: Works for ALL miners, not just those in the top 1000 leaderboard
+     * @dev IMPORTANT: Works for ALL miners, not just those in the top 100 leaderboard
      * @dev Returns 0 if the miner has never mined (no stats recorded)
      */
-    function getMinerScore(address miner) external view returns (uint256 score) {
+    function getMinerScore(address miner) external view returns (uint128 score) {
         return minerStats[minter].score;
     }
 
@@ -1312,10 +1312,10 @@ contract ERISTest is
      */
     function getLeaderboard(
         uint256 limit
-    ) external view returns (address[] memory topMiners, uint256[] memory scores) {
+    ) external view returns (address[] memory topMiners, uint128[] memory scores) {
         uint256 length = leaderboard.length < limit ? leaderboard.length : limit;
         topMiners = new address[](length);
-        scores = new uint256[](length);
+        scores = new uint128[](length);
         
         for (uint256 i = 0; i < length; i++) {
             topMiners[i] = leaderboard[i];

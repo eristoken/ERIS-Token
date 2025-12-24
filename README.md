@@ -143,15 +143,15 @@ The contract automatically tracks for **every miner**:
 
 #### Leaderboard
 
-The contract maintains a **sorted leaderboard** of the top 1000 miners by score (highest first). The leaderboard is automatically updated on-chain whenever a miner's score increases.
+The contract maintains a **sorted leaderboard** of the top 100 miners by score (highest first). The leaderboard is automatically updated on-chain whenever a miner's score increases.
 
 **Leaderboard Features**:
 - Automatically sorted by score (descending)
-- Maintains top 1000 miners for gas efficiency
+- Maintains top 100 miners for gas efficiency
 - Real-time updates on each successful mine
 - Binary search insertion for efficient updates
 
-**Note**: The leaderboard only maintains the top 1000 for gas efficiency, but you can still query stats for **any miner** using the stats functions below.
+**Note**: The leaderboard only maintains the top 100 for gas efficiency, but you can still query stats for **any miner** using the stats functions below.
 
 #### Querying Miner Stats
 
