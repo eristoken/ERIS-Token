@@ -114,6 +114,130 @@ Each tier emits a unique event for tracking and analytics:
 - `DiscordianBlessing` - Blessed tier rewards
 - `Enigma23` - Rare 23 Enigma jackpot rewards
 
+### Miner Stats & Leaderboard
+
+ERIS tracks comprehensive statistics for all miners, enabling leaderboards, trophy systems, and analytics.
+
+#### Score System
+
+Each successful mine awards points based on the tier mined:
+- **Tier 1 (Discordant)**: 1 point
+- **Tier 2 (Neutral)**: 2 points
+- **Tier 3 (Favored)**: 3 points
+- **Tier 4 (Blessed)**: 4 points
+- **Tier 5 (Enigma23)**: 5 points
+
+**Total Score** = (Tier 1 count × 1) + (Tier 2 count × 2) + (Tier 3 count × 3) + (Tier 4 count × 4) + (Tier 5 count × 5)
+
+#### Miner Statistics
+
+The contract automatically tracks for **every miner**:
+- `tier1Count` - Number of Tier 1 (Discordant) mines
+- `tier2Count` - Number of Tier 2 (Neutral) mines
+- `tier3Count` - Number of Tier 3 (Favored) mines
+- `tier4Count` - Number of Tier 4 (Blessed) mines
+- `tier5Count` - Number of Tier 5 (Enigma23) mines
+- `score` - Total points (calculated automatically)
+
+**Important**: Stats are tracked for **ALL miners**, not just those in the leaderboard. You can query stats for any miner address regardless of their ranking.
+
+#### Leaderboard
+
+The contract maintains a **sorted leaderboard** of the top 1000 miners by score (highest first). The leaderboard is automatically updated on-chain whenever a miner's score increases.
+
+**Leaderboard Features**:
+- Automatically sorted by score (descending)
+- Maintains top 1000 miners for gas efficiency
+- Real-time updates on each successful mine
+- Binary search insertion for efficient updates
+
+**Note**: The leaderboard only maintains the top 1000 for gas efficiency, but you can still query stats for **any miner** using the stats functions below.
+
+#### Querying Miner Stats
+
+```solidity
+// Get complete stats for any miner
+function getMinerStats(address miner) external view returns (
+    uint256 tier1Count,
+    uint256 tier2Count,
+    uint256 tier3Count,
+    uint256 tier4Count,
+    uint256 tier5Count,
+    uint256 score
+);
+
+// Get just the score for a miner
+function getMinerScore(address miner) external view returns (uint256 score);
+
+// Batch query stats for multiple miners
+function getMinerStatsBatch(address[] calldata minerAddresses) 
+    external view returns (MinerStats[] memory stats);
+```
+
+#### Querying the Leaderboard
+
+```solidity
+// Get top N miners with scores (sorted, highest first)
+function getLeaderboard(uint256 limit) external view returns (
+    address[] memory topMiners,
+    uint256[] memory scores
+);
+
+// Get top N miners with full stats (sorted, highest first)
+function getLeaderboardWithStats(uint256 limit) external view returns (
+    address[] memory topMiners,
+    MinerStats[] memory stats
+);
+
+// Get current leaderboard size
+function getLeaderboardSize() external view returns (uint256 size);
+```
+
+#### Pagination for All Miners
+
+If you need to retrieve stats for all miners (not just top 1000):
+
+```solidity
+// Get total number of miners
+function getMinerCount() external view returns (uint256 count);
+
+// Get miner addresses in batches (for pagination)
+function getMinerAddressesBatch(uint256 offset, uint256 limit) 
+    external view returns (
+        address[] memory minerAddresses,
+        uint256 totalCount
+    );
+
+// Then use getMinerStatsBatch() with the addresses
+```
+
+#### Events
+
+- `MinerStatsUpdated` - Emitted when a miner's stats are updated
+  - Includes: miner address, tier mined, new score, and all tier counts
+  - Useful for off-chain indexing and analytics
+
+#### Use Cases
+
+**Trophy Crafting**: Query any miner's tier counts to award trophies:
+```javascript
+const stats = await contract.getMinerStats(userAddress);
+if (stats.tier5Count >= 10) {
+  // Award "Enigma Master" trophy
+}
+if (stats.tier4Count >= 50) {
+  // Award "Blessed Miner" trophy
+}
+```
+
+**Leaderboard Display**: Get top miners with a single call:
+```javascript
+const [topMiners, stats] = await contract.getLeaderboardWithStats(100);
+// Already sorted by score, ready to display!
+```
+
+**Analytics**: Track mining patterns and tier distributions across all miners.
+
 ### Flash Loans
 - ERC-3156 Flash Mint implementation
 - 0.01% fee (or minimum 1,000 wei for small amounts)
@@ -300,6 +424,16 @@ function setCCIPExtraArgs(uint256 newGasLimit, bool newAllowOutOfOrderExecution)
 - `getMiningReward()` - Get base reward amount (EIP-918 compliance - returns 23 ERIS base reward)
   - **Note**: Actual rewards use tiered system (11.5-529 ERIS). See Discordian Reward System section.
 - `minedSupply()` - Get total tokens minted via PoW
+
+### Miner Stats & Leaderboard Functions
+- `getMinerStats(address)` - Get complete stats for any miner (tier counts + score)
+- `getMinerScore(address)` - Get score for any miner
+- `getMinerStatsBatch(address[])` - Batch query stats for multiple miners
+- `getLeaderboard(uint256 limit)` - Get top N miners with scores (sorted)
+- `getLeaderboardWithStats(uint256 limit)` - Get top N miners with full stats (sorted)
+- `getLeaderboardSize()` - Get current leaderboard size
+- `getMinerCount()` - Get total number of miners
+- `getMinerAddressesBatch(uint256 offset, uint256 limit)` - Paginate through all miners
 
 ### Cross-Chain Functions
 - `sendCCIPCrossChainBridge(string, uint256)` - Bridge via CCIP

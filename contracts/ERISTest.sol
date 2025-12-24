@@ -114,6 +114,32 @@ contract ERISTest is
     uint public lastRewardEthBlockNumber;
 
     // --------------------------------------------
+    // Miner Stats & Leaderboard
+    // --------------------------------------------
+    struct MinerStats {
+        uint256 tier1Count; // Discordant
+        uint256 tier2Count; // Neutral
+        uint256 tier3Count; // Favored
+        uint256 tier4Count; // Blessed
+        uint256 tier5Count; // Enigma23
+        uint256 score;      // Total score (tier1*1 + tier2*2 + tier3*3 + tier4*4 + tier5*5)
+    }
+
+    // NOTE: minerStats mapping stores stats for ALL miners who have ever mined
+    // The leaderboard array only maintains top 1000 for efficient sorted retrieval
+    // You can still query stats for ANY miner using getMinerStats() regardless of leaderboard position
+    mapping(address => MinerStats) public minerStats; // Stats for ALL miners (not limited to top 1000)
+    address[] public miners; // Array to track all miner addresses for iteration
+    mapping(address => bool) public isRegisteredMiner; // Track if miner is already in the array
+
+    // Sorted leaderboard (top miners by score, descending order)
+    // NOTE: This only maintains top MAX_LEADERBOARD_SIZE miners for gas efficiency
+    // All miner stats are still accessible via minerStats mapping regardless of leaderboard position
+    address[] public leaderboard; // Sorted array of top miners by score (highest first)
+    mapping(address => uint256) public leaderboardIndex; // Maps address to their position in leaderboard (1-indexed, 0 = not in leaderboard)
+    uint256 public constant MAX_LEADERBOARD_SIZE = 1000; // Maximum number of miners in leaderboard
+
+    // --------------------------------------------
     // Faucet
     // --------------------------------------------
     mapping(address => uint256) public lastFaucetClaim;
@@ -158,6 +184,18 @@ contract ERISTest is
     event ErisFavor(address indexed miner, uint256 reward);
     event DiscordianBlessing(address indexed miner, uint256 reward);
     event Enigma23(address indexed miner, uint256 reward);
+
+    // Miner stats events
+    event MinerStatsUpdated(
+        address indexed miner,
+        uint256 tier,
+        uint256 newScore,
+        uint256 tier1Count,
+        uint256 tier2Count,
+        uint256 tier3Count,
+        uint256 tier4Count,
+        uint256 tier5Count
+    );
 
     event CrossChainReceived(uint256 amount, address owner, uint64 sourceChain);
     event CrossChainSent(
@@ -621,6 +659,9 @@ contract ERISTest is
         _mint(minter, reward);
         tokensMinted += reward;
 
+        // Update miner stats (tier counts and score)
+        _updateMinerStats(minter, tier);
+
         lastRewardTo = minter;
         lastRewardAmount = reward;
         lastRewardEthBlockNumber = block.number;
@@ -736,6 +777,184 @@ contract ERISTest is
         } else { // Enigma23
             emit Enigma23(minter, reward);
         }
+    }
+
+    /**
+     * @notice Updates miner stats when a successful mine occurs
+     * @param minter The address of the miner
+     * @param tier The reward tier that was mined
+     * @dev Increments the appropriate tier count and updates the total score
+     * @dev Score calculation: Tier 1 = 1 point, Tier 2 = 2 points, Tier 3 = 3 points, Tier 4 = 4 points, Tier 5 = 5 points
+     */
+    function _updateMinerStats(
+        address minter,
+        RewardTier tier
+    ) internal {
+        // Register miner if this is their first mine
+        if (!isRegisteredMiner[minter]) {
+            miners.push(minter);
+            isRegisteredMiner[minter] = true;
+        }
+
+        MinerStats storage stats = minerStats[minter];
+        uint256 tierNumber;
+        uint256 points;
+
+        // Map RewardTier enum to tier number (1-5) and points
+        if (tier == RewardTier.Discordant) {
+            stats.tier1Count++;
+            tierNumber = 1;
+            points = 1;
+        } else if (tier == RewardTier.Neutral) {
+            stats.tier2Count++;
+            tierNumber = 2;
+            points = 2;
+        } else if (tier == RewardTier.Favored) {
+            stats.tier3Count++;
+            tierNumber = 3;
+            points = 3;
+        } else if (tier == RewardTier.Blessed) {
+            stats.tier4Count++;
+            tierNumber = 4;
+            points = 4;
+        } else {
+            // Enigma23
+            stats.tier5Count++;
+            tierNumber = 5;
+            points = 5;
+        }
+
+        // Update total score
+        uint256 oldScore = stats.score;
+        stats.score += points;
+
+        // Update leaderboard if score changed
+        _updateLeaderboard(minter, oldScore, stats.score);
+
+        // Emit event for off-chain indexing
+        emit MinerStatsUpdated(
+            minter,
+            tierNumber,
+            stats.score,
+            stats.tier1Count,
+            stats.tier2Count,
+            stats.tier3Count,
+            stats.tier4Count,
+            stats.tier5Count
+        );
+    }
+
+    /**
+     * @notice Updates the sorted leaderboard when a miner's score changes
+     * @param miner The address of the miner
+     * @param oldScore The miner's score before the update
+     * @param newScore The miner's score after the update
+     * @dev Maintains a sorted leaderboard array (highest score first)
+     * @dev Only maintains top MAX_LEADERBOARD_SIZE miners to keep gas costs reasonable
+     */
+    function _updateLeaderboard(
+        address miner,
+        uint256 oldScore,
+        uint256 newScore
+    ) internal {
+        uint256 currentIndex = leaderboardIndex[miner];
+        bool isInLeaderboard = currentIndex > 0;
+
+        // If miner is already in leaderboard
+        if (isInLeaderboard) {
+            uint256 arrayIndex = currentIndex - 1; // Convert to 0-indexed
+            
+            // If score increased, move miner up in leaderboard
+            if (newScore > oldScore) {
+                // Remove from current position
+                _removeFromLeaderboard(arrayIndex);
+                
+                // Find new position (higher scores first)
+                uint256 newPosition = _findLeaderboardPosition(newScore);
+                _insertIntoLeaderboard(miner, newPosition);
+            }
+            // If score didn't change, no update needed
+            // Note: Scores can only increase, so we don't need to handle decreases
+        } else {
+            // Miner not in leaderboard - check if they should be added
+            if (leaderboard.length < MAX_LEADERBOARD_SIZE) {
+                // Leaderboard not full, add miner
+                uint256 position = _findLeaderboardPosition(newScore);
+                _insertIntoLeaderboard(miner, position);
+            } else {
+                // Leaderboard is full - check if new score beats the lowest score
+                uint256 lowestScore = minerStats[leaderboard[leaderboard.length - 1]].score;
+                if (newScore > lowestScore) {
+                    // Remove lowest scorer
+                    _removeFromLeaderboard(leaderboard.length - 1);
+                    
+                    // Add new miner
+                    uint256 position = _findLeaderboardPosition(newScore);
+                    _insertIntoLeaderboard(miner, position);
+                }
+            }
+        }
+    }
+
+    /**
+     * @notice Finds the correct position in leaderboard for a given score
+     * @param score The score to find position for
+     * @return position The index where this score should be inserted (0-indexed)
+     * @dev Uses binary search for efficiency
+     */
+    function _findLeaderboardPosition(uint256 score) internal view returns (uint256 position) {
+        uint256 left = 0;
+        uint256 right = leaderboard.length;
+        
+        // Binary search for insertion point (maintains descending order)
+        while (left < right) {
+            uint256 mid = (left + right) / 2;
+            uint256 midScore = minerStats[leaderboard[mid]].score;
+            
+            if (score > midScore) {
+                right = mid;
+            } else {
+                left = mid + 1;
+            }
+        }
+        
+        return left;
+    }
+
+    /**
+     * @notice Inserts a miner into the leaderboard at the specified position
+     * @param miner The address of the miner to insert
+     * @param position The position to insert at (0-indexed)
+     */
+    function _insertIntoLeaderboard(address miner, uint256 position) internal {
+        // Shift elements to the right
+        leaderboard.push(address(0)); // Add placeholder
+        for (uint256 i = leaderboard.length - 1; i > position; i--) {
+            leaderboard[i] = leaderboard[i - 1];
+            leaderboardIndex[leaderboard[i]] = i + 1; // Update index (1-indexed)
+        }
+        
+        // Insert miner
+        leaderboard[position] = miner;
+        leaderboardIndex[miner] = position + 1; // Store as 1-indexed
+    }
+
+    /**
+     * @notice Removes a miner from the leaderboard at the specified position
+     * @param position The position to remove from (0-indexed)
+     */
+    function _removeFromLeaderboard(uint256 position) internal {
+        address removedMiner = leaderboard[position];
+        leaderboardIndex[removedMiner] = 0; // Mark as not in leaderboard
+        
+        // Shift elements to the left
+        for (uint256 i = position; i < leaderboard.length - 1; i++) {
+            leaderboard[i] = leaderboard[i + 1];
+            leaderboardIndex[leaderboard[i]] = i + 1; // Update index (1-indexed)
+        }
+        
+        // Remove last element
+        leaderboard.pop();
     }
 
     /**
@@ -968,6 +1187,172 @@ contract ERISTest is
      */
     function minedSupply() external view returns (uint) {
         return tokensMinted;
+    }
+
+    /*
+        ---------------------------------------------------------
+        Miner Stats & Leaderboard Getters
+        ---------------------------------------------------------
+    */
+
+    /**
+     * @notice Returns the complete stats for a given miner
+     * @param miner The address of the miner
+     * @return tier1Count Number of Tier 1 (Discordant) mines
+     * @return tier2Count Number of Tier 2 (Neutral) mines
+     * @return tier3Count Number of Tier 3 (Favored) mines
+     * @return tier4Count Number of Tier 4 (Blessed) mines
+     * @return tier5Count Number of Tier 5 (Enigma23) mines
+     * @return score Total score (tier1*1 + tier2*2 + tier3*3 + tier4*4 + tier5*5)
+     * @dev Use this function to retrieve all stats for a miner in a single call
+     * @dev IMPORTANT: Works for ALL miners, not just those in the top 1000 leaderboard
+     * @dev The minerStats mapping tracks stats for every miner who has ever mined
+     * @dev Perfect for trophy crafting and checking stats for any miner address
+     */
+    function getMinerStats(
+        address miner
+    )
+        external
+        view
+        returns (
+            uint256 tier1Count,
+            uint256 tier2Count,
+            uint256 tier3Count,
+            uint256 tier4Count,
+            uint256 tier5Count,
+            uint256 score
+        )
+    {
+        MinerStats memory stats = minerStats[minter];
+        return (
+            stats.tier1Count,
+            stats.tier2Count,
+            stats.tier3Count,
+            stats.tier4Count,
+            stats.tier5Count,
+            stats.score
+        );
+    }
+
+    /**
+     * @notice Returns the score for a given miner
+     * @param miner The address of the miner
+     * @return score Total score (tier1*1 + tier2*2 + tier3*3 + tier4*4 + tier5*5)
+     * @dev Lightweight function to get just the score
+     * @dev IMPORTANT: Works for ALL miners, not just those in the top 1000 leaderboard
+     * @dev Returns 0 if the miner has never mined (no stats recorded)
+     */
+    function getMinerScore(address miner) external view returns (uint256 score) {
+        return minerStats[minter].score;
+    }
+
+    /**
+     * @notice Returns the total number of miners
+     * @return count Total number of unique miners
+     * @dev Use this with getMinerStatsBatch to retrieve all miner data
+     */
+    function getMinerCount() external view returns (uint256 count) {
+        return miners.length;
+    }
+
+    /**
+     * @notice Returns miner addresses in a batch (for pagination)
+     * @param offset Starting index in the miners array
+     * @param limit Maximum number of addresses to return
+     * @return minerAddresses Array of miner addresses
+     * @return totalCount Total number of miners (for pagination)
+     * @dev Use this to paginate through all miners. Example: getMinerAddressesBatch(0, 100) gets first 100 miners
+     * @dev Then call getMinerStatsBatch with those addresses to get their stats
+     */
+    function getMinerAddressesBatch(
+        uint256 offset,
+        uint256 limit
+    ) external view returns (address[] memory minerAddresses, uint256 totalCount) {
+        totalCount = miners.length;
+        uint256 end = offset + limit;
+        if (end > totalCount) {
+            end = totalCount;
+        }
+        if (offset >= totalCount) {
+            return (new address[](0), totalCount);
+        }
+
+        uint256 length = end - offset;
+        minerAddresses = new address[](length);
+        for (uint256 i = 0; i < length; i++) {
+            minerAddresses[i] = miners[offset + i];
+        }
+        return (minerAddresses, totalCount);
+    }
+
+    /**
+     * @notice Returns stats for multiple miners in a single call
+     * @param minerAddresses Array of miner addresses to query
+     * @return stats Array of MinerStats structs corresponding to the input addresses
+     * @dev Use this with getMinerAddressesBatch to efficiently retrieve all miner stats
+     * @dev Example: Get addresses with getMinerAddressesBatch(0, 100), then get stats with getMinerStatsBatch(addresses)
+     */
+    function getMinerStatsBatch(
+        address[] calldata minerAddresses
+    ) external view returns (MinerStats[] memory stats) {
+        stats = new MinerStats[](minerAddresses.length);
+        for (uint256 i = 0; i < minerAddresses.length; i++) {
+            stats[i] = minerStats[minerAddresses[i]];
+        }
+        return stats;
+    }
+
+    /**
+     * @notice Returns the sorted leaderboard (top miners by score)
+     * @param limit Maximum number of top miners to return
+     * @return topMiners Array of miner addresses sorted by score (highest first)
+     * @return scores Array of scores corresponding to the miners
+     * @dev Returns the top N miners from the maintained sorted leaderboard
+     * @dev This is gas-efficient as it only reads from a pre-sorted array
+     */
+    function getLeaderboard(
+        uint256 limit
+    ) external view returns (address[] memory topMiners, uint256[] memory scores) {
+        uint256 length = leaderboard.length < limit ? leaderboard.length : limit;
+        topMiners = new address[](length);
+        scores = new uint256[](length);
+        
+        for (uint256 i = 0; i < length; i++) {
+            topMiners[i] = leaderboard[i];
+            scores[i] = minerStats[leaderboard[i]].score;
+        }
+        
+        return (topMiners, scores);
+    }
+
+    /**
+     * @notice Returns the leaderboard with full stats
+     * @param limit Maximum number of top miners to return
+     * @return topMiners Array of miner addresses sorted by score (highest first)
+     * @return stats Array of MinerStats for the top miners
+     * @dev Returns complete stats for the top N miners
+     */
+    function getLeaderboardWithStats(
+        uint256 limit
+    ) external view returns (address[] memory topMiners, MinerStats[] memory stats) {
+        uint256 length = leaderboard.length < limit ? leaderboard.length : limit;
+        topMiners = new address[](length);
+        stats = new MinerStats[](length);
+        
+        for (uint256 i = 0; i < length; i++) {
+            topMiners[i] = leaderboard[i];
+            stats[i] = minerStats[leaderboard[i]];
+        }
+        
+        return (topMiners, stats);
+    }
+
+    /**
+     * @notice Returns the current size of the leaderboard
+     * @return size Number of miners currently in the leaderboard
+     */
+    function getLeaderboardSize() external view returns (uint256 size) {
+        return leaderboard.length;
     }
 
     /*
