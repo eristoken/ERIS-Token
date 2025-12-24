@@ -195,7 +195,7 @@ function getLeaderboardSize() external view returns (uint256 size);
 
 #### Pagination for All Miners
 
-If you need to retrieve stats for all miners (not just top 1000):
+If you need to retrieve stats for all miners (not just top 100):
 
 ```solidity
 // Get total number of miners
