@@ -3,20 +3,38 @@
   "version": "1.0.0",
   "type": "module",
   "devDependencies": {
-    "@nomicfoundation/hardhat-ignition": "^3.0.5",
+    "@nomicfoundation/hardhat-ignition": "^3.0.6",
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.1",
-    "@nomicfoundation/hardhat-verify": "^3.0.6",
-    "@types/node": "^22.19.0",
+    "@nomicfoundation/hardhat-verify": "^3.0.8",
+    "@types/node": "^25.0.3",
     "forge-std": "github:foundry-rs/forge-std#v1.9.4",
-    "hardhat": "^3.0.13",
-    "typescript": "~5.8.0",
-    "viem": "^2.38.6"
+    "hardhat": "^3.1.0",
+    "typescript": "^5.9.3",
+    "viem": "^2.43.3"
   },
   "dependencies": {
     "@chainlink/contracts": "^1.5.0",
-    "@chainlink/contracts-ccip": "^1.6.3",
+    "@chainlink/contracts-ccip": "^1.6.4",
     "@openzeppelin/contracts": "^5.5.0",
-    "dotenv": "^16.6.1"
+    "dotenv": "^17.2.3"
+  },
+  "overrides": {
+    "@openzeppelin/contracts-upgradeable": "5.5.0",
+    "@chainlink/contracts": {
+      "@openzeppelin/contracts": "5.5.0",
+      "@openzeppelin/contracts-4.7.3": "npm:@openzeppelin/contracts@5.5.0",
+      "@openzeppelin/contracts-4.8.3": "npm:@openzeppelin/contracts@5.5.0"
+    },
+    "@chainlink/contracts-ccip": {
+      "@openzeppelin/contracts": "5.5.0",
+      "@openzeppelin/contracts-4.8.3": "npm:@openzeppelin/contracts@5.5.0",
+      "@chainlink/contracts": {
+        "@openzeppelin/contracts": "5.5.0",
+        "@openzeppelin/contracts-4.7.3": "npm:@openzeppelin/contracts@5.5.0",
+        "@openzeppelin/contracts-4.8.3": "npm:@openzeppelin/contracts@5.5.0"
+      }
+    },
+    "tmp": "^0.2.3"
   },
   "scripts": {
     "build": "npx hardhat compile",

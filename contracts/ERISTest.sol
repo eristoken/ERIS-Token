@@ -1223,7 +1223,7 @@ contract ERISTest is
             uint128 score
         )
     {
-        MinerStats memory stats = minerStats[minter];
+        MinerStats memory stats = minerStats[miner];
         return (
             stats.tier1Count,
             stats.tier2Count,
@@ -1243,7 +1243,7 @@ contract ERISTest is
      * @dev Returns 0 if the miner has never mined (no stats recorded)
      */
     function getMinerScore(address miner) external view returns (uint128 score) {
-        return minerStats[minter].score;
+        return minerStats[miner].score;
     }
 
     /**
