@@ -38,11 +38,12 @@
   },
   "scripts": {
     "build": "npx hardhat compile",
-    "deploy_erisTest": "npx hardhat ignition deploy ignition/modules/ERISTest.ts --network base-sepolia --strategy create2",
+    "deploy_erisTest": "npx hardhat ignition deploy ignition/modules/ERISTest.ts --network arbitrum-sepolia --strategy create2",
     "deploy_erisSep": "npx hardhat ignition deploy ignition/modules/ERISSepolia.ts --network bscTestnet --strategy create2",
     "deploy_eris": "npx hardhat ignition deploy ignition/modules/ERIS.ts --network polygon --strategy create2",
     "verify_eris": "npx hardhat verify --network ink 0xae80e9FF0e624C44C252aD950DbF39ac9BdB9E4f 0x0000000000000000000000000000000000000000",
     "verify_erisSep": "npx hardhat verify --network bscTestnet 0xCeF263A2587fe8F9d4BEDAb339E4b5258ac07690 0x0000000000000000000000000000000000000000",
-    "verify_erisTest": "npx hardhat verify --network arbitrum-sepolia 0xDb6355d6f601d71725A5eb014759B2e60cB8C049 0x0000000000000000000000000000000000000000"
+    "verify_erisTest": "npx hardhat verify --network arbitrum-sepolia 0xb7Cee4472FC3025e3A298EF9B6287c0977719DaB 0x0000000000000000000000000000000000000000",
+    "verify_erisExample": "npx hardhat verify --network arbitrum-sepolia 0xDb6355d6f601d71725A5eb014759B2e60cB8C049 0x0000000000000000000000000000000000000000"
   }
 }
