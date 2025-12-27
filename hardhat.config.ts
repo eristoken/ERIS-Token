@@ -1,6 +1,6 @@
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
 import "@nomicfoundation/hardhat-verify";
-import { configVariable, defineConfig } from "hardhat/config";
+import { defineConfig } from "hardhat/config";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -87,7 +87,7 @@ export default defineConfig({
     base: {
       type: "http",
       chainType: "op",
-      url: "https://base.drpc.org",
+      url: "https://base-rpc.publicnode.com",
       accounts: [process.env.PRIVATE_KEY],
     },
     bsc: {

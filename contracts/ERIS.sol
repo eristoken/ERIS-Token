@@ -290,7 +290,7 @@ contract ERIS is
         // Set the mining start timestamp (immutable to prevent pre-mining attacks)
         // This ensures fair distribution by preventing miners from preparing solutions
         // in advance before the official launch
-        miningStartTimestamp = 1764309600;
+        miningStartTimestamp = 1767247200;
     }
 
     /*

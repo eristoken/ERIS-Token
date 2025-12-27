@@ -278,7 +278,7 @@ contract ERISSepolia is
         chainNames[bnbTestnetSelector] = "BNB Testnet";
         chainSelectorsByName["BNB Testnet"] = bnbTestnetSelector;
 
-        miningStartTimestamp = 1763359200; // Set the mining start timestamp
+        miningStartTimestamp = 1766815200; // Set the mining start timestamp
     }
 
     /*
